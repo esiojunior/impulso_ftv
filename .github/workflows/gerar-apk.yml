@@ -21,19 +21,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Extrair projeto do ZIP
+        run: |
+          mkdir -p /tmp/projeto
+          for z in *.zip; do unzip -q -o "$z" -d /tmp/projeto; done
+          find /tmp/projeto -maxdepth 3 | head -30
       - name: Compilar APK
         run: |
-          S=$(find . -name settings.gradle -not -path '*/node_modules/*' | head -n 1)
-          if [ -z "$S" ]; then
-            echo "ERRO: settings.gradle não encontrado. Arquivos no repositório:"
-            find . -not -path './.git/*' | head -50
-            exit 1
-          fi
-          DIR=$(dirname "$S")
-          echo "Projeto encontrado em: $DIR"
-          cd "$DIR"
+          S=$(find /tmp/projeto -name settings.gradle | head -n 1)
+          [ -z "$S" ] && { echo "settings.gradle não encontrado no ZIP"; exit 1; }
+          cd "$(dirname "$S")"
           gradle --no-daemon :app:assembleDebug
+          mkdir -p "$GITHUB_WORKSPACE/saida"
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/saida/"
       - uses: actions/upload-artifact@v4
         with:
           name: Impulso-Futevolei-Android-APK
-          path: '**/app/build/outputs/apk/debug/app-debug.apk'
+          path: saida/app-debug.apk
